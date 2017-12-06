@@ -14,6 +14,7 @@ import edu.uiuc.zenvisage.model.Point;
 import edu.uiuc.zenvisage.model.Sketch;
 import edu.uiuc.zenvisage.zql.executor.Constraints;
 import edu.uiuc.zenvisage.zqlcomplete.executor.Name;
+import edu.uiuc.zenvisage.zqlcomplete.executor.VizColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.XColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.YColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.ZColumn;
@@ -26,9 +27,8 @@ import edu.uiuc.zenvisage.zqlcomplete.executor.ZQLRow;
 public class VisualComponentNode extends QueryNode{
 
 	private VisualComponentQuery vc;
-	private SQLQueryExecutor sqlQueryExecutor;
-	private String db;
-	private Sketch sketch;
+	protected SQLQueryExecutor sqlQueryExecutor;
+	protected String db;
 	
 	// private vc output
 	//TODO: build separate result node
@@ -46,16 +46,14 @@ public class VisualComponentNode extends QueryNode{
 		this.db = db;
 	}
 
-	public VisualComponentNode(VisualComponentQuery vc, Sketch sketch) {
+	public VisualComponentNode(VisualComponentQuery vc) {
 		this.vc = vc;
-		this.sketch = sketch;
 	}
 
-	public VisualComponentNode(VisualComponentQuery vc, LookUpTable table, SQLQueryExecutor sqlQueryExecutor, Sketch sketch) {
+	public VisualComponentNode(VisualComponentQuery vc, LookUpTable table, SQLQueryExecutor sqlQueryExecutor) {
 		super(table);
 		this.vc = vc;
 		this.sqlQueryExecutor = sqlQueryExecutor;
-		this.sketch = sketch;
 	}
 
 	@Override
@@ -94,22 +92,22 @@ public class VisualComponentNode extends QueryNode{
 			VisualComponentList vcList = new VisualComponentList();
 			ArrayList<VisualComponent> list = new ArrayList<VisualComponent>();
 			vcList.setVisualComponentList(list);
-			
-			if(sketch == null || sketch.points.isEmpty()) {
+			Sketch sketch = this.getVc().getSketch();
+			if(sketch == null || sketch.getPoints().isEmpty()) {
 				this.state = State.FINISHED;
 				return;
 			}
 			ArrayList<WrapperType> xList = new ArrayList<WrapperType>();
 			ArrayList<WrapperType> yList = new ArrayList<WrapperType>();
-			for (Point point : sketch.points) {
-				xList.add(new WrapperType(point.getX()));
-				yList.add(new WrapperType(point.getY()));
+			for (Point point : sketch.getPoints()) {
+				xList.add(new WrapperType(point.getXval()));
+				yList.add(new WrapperType(point.getYval()));
 			}
 			
 			VisualComponent vc = new VisualComponent(new WrapperType("sketch", "string"), new Points(xList, yList));
-			vc.setxAttribute(sketch.xAxis);
-			vc.setyAttribute(sketch.yAxis);
-			vc.setzAttribute(sketch.groupBy);
+			vc.setxAttribute(sketch.getxAxis());
+			vc.setyAttribute(sketch.getyAxis());
+			vc.setzAttribute(sketch.getGroupBy());
 			vcList.addVisualComponent(vc);
 			
 			this.getLookUpTable().put(name_obj.getName(), vcList);
@@ -225,7 +223,7 @@ public class VisualComponentNode extends QueryNode{
 	 * Column hs no variable name, but values. Can use as is
 	 * Column has no variable name, and no value. Send as is (columns may be optional)
 	 */
-	public ZQLRow buildRowFromNode() {
+	protected ZQLRow buildRowFromNode() {
 
 		XColumn x = vc.getX();
 		// x1 (variable, no values)
@@ -268,13 +266,18 @@ public class VisualComponentNode extends QueryNode{
 			z.setValues(values);
 		}
 
+		// update the z column to make sure it strips extra '' out (so will be state, not 'state')
+		String str = z.getAttribute();
+		str = str.replace("'", "");
+		z.setAttribute(str);
+		
 		// So either z naturally has values eg from query with z=state.{'CA','NY'}
 		// Or z got values from the lookuptable eg z=v1
 		List<String> values = z.getValues();
 		if(!values.isEmpty() && !values.get(0).equals("") && !values.get(0).equals("*")){
 			String parentheSizedValues = generateParenthesizedList(values);
 		
-			if(vc.getConstraints()!=null || vc.getConstraints()!="" )
+			if(vc.getConstraints()!=null && vc.getConstraints()!="" )
 			{
 				vc.setConstraints(vc.getConstraints()+" AND ("+ z.getAttribute() +" IN "+parentheSizedValues + ")");
 			}
@@ -282,16 +285,14 @@ public class VisualComponentNode extends QueryNode{
 				vc.setConstraints(z.getAttribute() +" IN "+parentheSizedValues);
 		}
 
-		// update the z column to make sure it strips extra '' out (so will be state, not 'state')
-		String str = z.getAttribute();
-		str = str.replace("'", "");
-		z.setAttribute(str);
-
 		System.out.println("z information:");
 		System.out.println(z.getVariable());
 		//System.out.println(z.getValues());
 		System.out.println(z.getAttribute());
-		vc.getViz().setVariable("AVG");
+		
+		if(!vc.getViz().getMap().containsKey(VizColumn.aggregation)) {
+			vc.getViz().getMap().put(VizColumn.aggregation, "AVG");
+		}
 		ZQLRow result = new ZQLRow(x, y, z, vc.getConstraints(), vc.getViz());
 		// null processe and sketchPoints (for now)
 		return result;

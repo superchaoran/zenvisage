@@ -35,7 +35,7 @@ public class Database {
 			loadData0(datafilename);
 		else
 			loadData1(datafilename);
-		
+
 		//DatabaseCatalog.addDatabase(name, this);
 	}
 
@@ -49,7 +49,7 @@ public class Database {
 
 	private void addValue(String columnName,int row,String value){
 		Column column=columns.get(columnName);
-		
+
 //		System.out.println(columns.size());
 //		System.out.println(columnName);
 //		for(String key:columns.keySet()){
@@ -101,8 +101,7 @@ public class Database {
 		    	 columnMetadata.unit = terms[7];
 		     }
 
-		    Column column = new Column(columnMetadata, this);
-
+		     new Column(columnMetadata, this);
 		 }
 
 		bufferedReader.close();
@@ -131,7 +130,7 @@ public class Database {
             count=count+1;
 		 }
 		this.rowCount=count;
-		
+
 		//set min, max value for each of the column in database
 //		for(int i=0;i<header.length;i++){
 //			ColumnMetadata columnMetadata = columns.get(header[i]).columnMetadata;
@@ -144,7 +143,7 @@ public class Database {
 
 		bufferedReader.close();
 	}
-    
+
     public void loadData1(String datafilename) throws IOException, SQLException{
 	   	BufferedReader bufferedReader = new BufferedReader(new FileReader(datafilename));
 		String line;
@@ -163,17 +162,17 @@ public class Database {
 	        count=count+1;
 		 }
 		this.rowCount=count;
-		
+
 		//set min, max value for each of the column in database
-//		for(int i=0;i<header.length;i++){
-//			ColumnMetadata columnMetadata = columns.get(header[i]).columnMetadata;
-//			if(columnMetadata.dataType.equals("int") || columnMetadata.dataType.equals("float") ){
-//				SQLQueryExecutor sqlQueryExecutor = new SQLQueryExecutor();
-//				//System.out.println("min:" + columnMetadata.min + "max:"+columnMetadata.max);
-//				sqlQueryExecutor.updateMinMax(name, header[i], columnMetadata.min, columnMetadata.max);
-//			}
-//		}
-	
+		for(int i=0;i<header.length;i++){
+			ColumnMetadata columnMetadata = columns.get(header[i]).columnMetadata;
+			if(columnMetadata.dataType.equals("int") || columnMetadata.dataType.equals("float") ){
+				SQLQueryExecutor sqlQueryExecutor = new SQLQueryExecutor();
+				//System.out.println("min:" + columnMetadata.min + "max:"+columnMetadata.max);
+				sqlQueryExecutor.updateMinMax(name, header[i], columnMetadata.min, columnMetadata.max);
+			}
+		}
+
 		bufferedReader.close();
     }
 

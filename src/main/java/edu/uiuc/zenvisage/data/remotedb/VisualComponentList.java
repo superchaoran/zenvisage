@@ -22,10 +22,13 @@ public class VisualComponentList {
 	}
 	
 	public void addVisualComponent(VisualComponent input){
+		if (this.visualComponentList == null) {
+			this.visualComponentList = new ArrayList<VisualComponent>();
+		}
 		this.visualComponentList.add(input);
 	}
 	
-	public LinkedHashMap<String, LinkedHashMap<Float, Float>> toInMemoryHashmap(){
+	public synchronized LinkedHashMap<String, LinkedHashMap<Float, Float>> toInMemoryHashmap(){
 		LinkedHashMap<String, LinkedHashMap<Float, Float>> output = new LinkedHashMap<String, LinkedHashMap<Float, Float>>();
 		for(VisualComponent i: visualComponentList){
 			List<WrapperType> xList = i.getPoints().getXList();
@@ -35,7 +38,7 @@ public class VisualComponentList {
 			List<WrapperType> yList = i.getPoints().getYList();
 			LinkedHashMap<Float, Float> map = new LinkedHashMap<Float, Float>();
 			for(int j = 0; j < xList.size(); j++) {
-				map.put(xList.get(j).getNumberValue(), yList.get(j).getNumberValue());
+				map.put(new Float(xList.get(j).getNumberValue()), new Float(yList.get(j).getNumberValue()));
 			}
 			output.put(new String(i.getZValue().toString()), map);
 		}

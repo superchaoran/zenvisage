@@ -2,16 +2,13 @@ package edu.uiuc.zenvisage.zqlcomplete.querygraph;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Queue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.collections.MapUtils;
-
-import edu.uiuc.zenvisage.data.remotedb.SQLQueryExecutor;
 import edu.uiuc.zenvisage.data.remotedb.VisualComponent;
 import edu.uiuc.zenvisage.data.remotedb.VisualComponentList;
+import edu.uiuc.zenvisage.zqlcomplete.executor.VizColumn;
 import edu.uiuc.zenvisage.zqlcomplete.querygraph.QueryNode.State;
 
 /**
@@ -19,7 +16,7 @@ import edu.uiuc.zenvisage.zqlcomplete.querygraph.QueryNode.State;
  * Takes in a query graph and executes it
  */
 public class QueryGraphExecutor {
-
+	static final Logger logger = LoggerFactory.getLogger(QueryGraphExecutor.class);
 	/**
 	 * Taking in a queryGraph, execute it from entryNodes down to leaves.
 	 * In the meantime, buildup the resultGraph to go along with it.
@@ -46,7 +43,7 @@ public class QueryGraphExecutor {
 					// probably needs to be fixed with some "visited" state 
 					continue;
 				}
-				System.out.println("Processing Node: "+ currNode.toString());
+				logger.info("Processing Node: "+ currNode.toString());
 				currNode.execute(); 
 				if (currNode.state == State.FINISHED) {
 					// TODO: currently always outputs result of final node!
@@ -56,10 +53,16 @@ public class QueryGraphExecutor {
 						
 						// If this node was selected as an output node (Eg *f2), update the execution output to include this node's output as well
 						if (temp.getVc().getName().getOutput()) {
-							VisualComponentList toAdd = (VisualComponentList) (currNode).lookuptable.get(temp.getVc().getName().getName());
-							outputList.getVisualComponentList().addAll(toAdd.getVisualComponentList());
+							if (temp.getVc().getViz().getMap().containsKey(VizColumn.type) && temp.getVc().getViz().getMap().get(VizColumn.type).equals(VizColumn.scatter)) {
+								//Scatter plot case
+								VisualComponentList toAdd = ((ScatterVCNode) currNode).getVcList();
+								outputList.getVisualComponentList().addAll(toAdd.getVisualComponentList());
+							} else {
+								VisualComponentList toAdd = (VisualComponentList) (currNode).lookuptable.get(temp.getVc().getName().getName());
+								outputList.getVisualComponentList().addAll(toAdd.getVisualComponentList());
+							}
 						}
-						System.out.println("To output = " + temp.getVc().getName().getOutput());
+						//System.out.println("To output = " + temp.getVc().getName().getOutput());
 					}
 					//System.out.println(" My map");
 					//MapUtils.debugPrint(System.out, "myMap", currNode.lookuptable.getVariables());

@@ -23,3 +23,8 @@ hs_err_pid*
 .classpath
 
 /bin/
+
+/.metadata/
+src/main/resources/uploaded_data/*.csv
+src/main/resources/uploaded_data/*.txt
+*.log

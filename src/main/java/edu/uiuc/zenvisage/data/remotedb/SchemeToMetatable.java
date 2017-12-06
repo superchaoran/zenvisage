@@ -15,7 +15,7 @@ public class SchemeToMetatable {
 	public List<String> columns;
 	
 	public SchemeToMetatable(){
-		createTableSQL =null;
+		createTableSQL = null;
 		columns = new ArrayList<String>();
 	};
 	
@@ -46,6 +46,7 @@ public class SchemeToMetatable {
 //		InputStream is = getClass().getResourceAsStream(filePath);
 		tablename = tablename.toLowerCase();
 		StringBuilder createTableSQLBuilder = new StringBuilder("Create table " + tablename + "(");
+		createTableSQLBuilder.append("id SERIAL PRIMARY KEY, ");
 		
 	   	BufferedReader br = new BufferedReader(new FileReader(filePath));
 		String sCurrentLine;
@@ -56,6 +57,10 @@ public class SchemeToMetatable {
 			createTableSQLBuilder.append(split1[0].toLowerCase().replaceAll("-", "")+ " " + typeToPostgresType(split2[0]) + ", ");
 			this.columns.add(split1[0].toLowerCase().toLowerCase().replaceAll("-", ""));
 		}
+		
+		//Adding dynamic_class column
+		createTableSQLBuilder.append("dynamic_class"+ " " + "TEXT" + ", ");
+		
 		br.close();
 		createTableSQLBuilder.replace(createTableSQLBuilder.length()-2,createTableSQLBuilder.length(), ");");
 //		System.out.println(createTableSQL);
@@ -68,6 +73,7 @@ public class SchemeToMetatable {
 //		InputStream is = getClass().getResourceAsStream(filePath);
 		tablename = tablename.toLowerCase();
 		StringBuilder createTableSQLBuilder = new StringBuilder("Create table " + tablename + "(");
+		createTableSQLBuilder.append("id SERIAL PRIMARY KEY, ");
 		
 	   	BufferedReader br = new BufferedReader(new FileReader(filePath));
 		StringBuffer sql = new StringBuffer("INSERT INTO zenvisage_metatable (tablename, attribute, type) VALUES ");
@@ -80,6 +86,10 @@ public class SchemeToMetatable {
 			createTableSQLBuilder.append(split1[0].toLowerCase().replaceAll("-", "")+ " " + typeToPostgresType(split2[0]) + ", ");
 			this.columns.add(split1[0].toLowerCase().toLowerCase().replaceAll("-", ""));
 		}
+		
+		//Adding dynamic_class column
+		createTableSQLBuilder.append("dynamic_class"+ " " + "TEXT" + ", ");
+				
 		br.close();
 		sql.replace(sql.length()-2, sql.length(), ";");
 		createTableSQLBuilder.replace(createTableSQLBuilder.length()-2,createTableSQLBuilder.length(), ");");

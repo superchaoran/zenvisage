@@ -1,8 +1,13 @@
 package edu.uiuc.zenvisage.model;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+
+import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.util.FastMath;
+
 import edu.uiuc.zenvisage.model.BaselineQuery;
 import edu.uiuc.zenvisage.model.ZvQuery;
 import edu.uiuc.zenvisage.service.cluster.OutlierTrend;
@@ -29,7 +34,36 @@ public class ChartOutputUtil {
 		this.args = args;
 		this.xMap = xMap.inverse();
 	}
+	
+	
+  public void chartOutput(LinkedHashMap<String,LinkedHashMap<Float,Float>> orig,ZvQuery args, Result finalOutput)
+  {		 System.out.println("chartoutput executing!");
+  		Iterator<String> it =orig.keySet().iterator();
+  		
+  		
+		while(it.hasNext()){
+		    String entry = it.next();
+			Chart chartOutput = new Chart();
+			/*Separate this call to rank and x axix and return separately*/
+			//chartOutput.setxType((i+1)+" : "+mappings.get(orders.get(i)));
+			chartOutput.setxType(args.xAxis);
+			chartOutput.setyType(args.yAxis);
+			chartOutput.setzType(args.groupBy);
+			chartOutput.title = entry;
+			chartOutput.setXRange(args.xRange);
+			chartOutput.setConsiderRange(args.considerRange);
 
+			// fill in chart data
+			LinkedHashMap<Float,Float> points = orig.get(entry);
+			if (points == null) continue;
+			for(Float k : points.keySet()) {
+				chartOutput.xData.add(Double.toString(k));
+				chartOutput.yData.add(Double.toString(points.get(k)));
+			}
+			finalOutput.outputCharts.add(chartOutput);
+			
+        }
+}
 	/**
 	 * @param result
 	 * @param orig
@@ -47,14 +81,27 @@ public class ChartOutputUtil {
 			outputLength = output.length;
 		//}
 
-		Double range = 0.0;
-		if(orderedDistances != null && orderedDistances.size()!= 0){
-//			range = orderedDistances.get(0) - orderedDistances.get(orderedDistances.size()-1);
-			range = orderedDistances.get(orderedDistances.size()-1);
-		}
-
+//		Double range = 0.0;
+//		if(orderedDistances != null && orderedDistances.size()!= 0){
+////			range = orderedDistances.get(0) - orderedDistances.get(orderedDistances.size()-1);
+//			range = orderedDistances.get(orderedDistances.size()-1);
+//		}
+		double maxDist = orderedDistances.get(Math.min(outputLength-1, args.outlierCount));
+		System.out.println("orderedDistances.size():"+Double.toString(orderedDistances.size()));
 		for(int i = 0; i < Math.min(outputLength, args.outlierCount); i++) {
-			// initialize a new chart
+			// System.out.println("orderedDistances:"+Double.toString(orderedDistances.get(i)));
+//			double normDist =normalize(orderedDistances, range, i);
+			double normDist =normalize(orderedDistances,maxDist, i);
+			boolean displayThisViz = false;
+			if (args.minDisplayThresh!=0.0){
+				 if (normDist>=args.minDisplayThresh){
+					 displayThisViz = true;
+				 }
+			}else{
+				displayThisViz = true;
+			}
+			if (displayThisViz){
+				// initialize a new chart
 				Chart chartOutput = new Chart();
 				/*Separate this call to rank and x axix and return separately*/
 				//chartOutput.setxType((i+1)+" : "+mappings.get(orders.get(i)));
@@ -63,7 +110,7 @@ public class ChartOutputUtil {
 				chartOutput.setzType(args.groupBy);
 				chartOutput.title = mappings.get(orders.get(i));
 				chartOutput.setRank(i+1);
-				chartOutput.setNormalizedDistance(normalize(orderedDistances, range, i));
+				chartOutput.setNormalizedDistance(normDist);
 				// chartOutput.setyType(args.getSketchPoints()[j].aggrFunc+"("+args.getSketchPoints()[j].yAxis+")");
 				chartOutput.setDistance(orderedDistances.get(i));
 				chartOutput.setXRange(args.xRange);
@@ -79,17 +126,91 @@ public class ChartOutputUtil {
 				}
 				finalOutput.outputCharts.add(chartOutput);
 			}
+		}
 
 		return;
 	}
 
 	/*z= (xi-min(x)) /(max(x)-min(x))*/
-	public double normalize(List<Double> orderedDistances, double range, int i){
-		if (range == 0)
-			return 1.0;
-		else
-			return (range - orderedDistances.get(i)) / range;
+//	public double normalize(List<Double> orderedDistances, double range, int i){
+//		if (range == 0)
+//			return 1.0;
+//		else
+//			return (range - orderedDistances.get(i)) / range;
+//	}
+//	public double normalize(List<Double> orderedDistances, int i){
+////		double sum=0;
+//		double max= Double.NEGATIVE_INFINITY;
+//		double[] distArr=new double[orderedDistances.size()];
+//		for (int j = 0; j<orderedDistances.size(); j++){
+//			double val = orderedDistances.get(j);
+////			sum+=val;
+//			distArr[j]=val;
+////			if (val>max){
+////				max=val;
+////			}
+////			System.out.println("val:"+Double.toString(val));
+////			System.out.println("imax:"+Double.toString(max));
+//		}
+//		double mean = StatUtils.mean(distArr);
+//		double std = FastMath.sqrt(StatUtils.variance(distArr));
+//
+//		System.out.println("min:"+orderedDistances.get(0));
+//		System.out.println("max:"+orderedDistances.get(orderedDistances.size()-1));
+//		System.out.println("mean:"+Double.toString(mean));
+//		System.out.println("std:"+Double.toString(std));
+//		double fakeMin = mean-3*std;
+//		double fakeMax = mean+3*std;
+//		System.out.println("fakeMin:"+Double.toString(fakeMin));
+//		System.out.println("fakeMax:"+Double.toString(fakeMax));
+//		System.out.println("orderedDistances.size():"+orderedDistances.size());
+//		double[] cleanedDistArr=new double[orderedDistances.size()];
+//		for (int j = 0; j<orderedDistances.size(); j++){
+//			double val = orderedDistances.get(j);
+//			if (val<=fakeMax){
+//				cleanedDistArr[j]=val;
+//			}
+////			System.out.println("val:"+Double.toString(val));
+////			System.out.println("imax:"+Double.toString(max));
+//		}
+//		System.out.println("cleanedDistArr.length:"+cleanedDistArr.length);
+//		mean = StatUtils.mean(cleanedDistArr);
+//		std = FastMath.sqrt(StatUtils.variance(cleanedDistArr));
+//		System.out.println("mean:"+Double.toString(mean));
+//		System.out.println("std:"+Double.toString(std));
+//		
+//		System.out.println("result:"+Double.toString((fakeMax-orderedDistances.get(i))/(fakeMax)));
+////		return  (orderedDistances.get(i)-fakeMin)/(max-fakeMin);
+//		if (orderedDistances.get(i)<= orderedDistances.get(0)){
+//			return 1.0;
+//		}
+//		return (fakeMax-orderedDistances.get(i))/(fakeMax);
+//		
+////		if (range == 0)
+////			return 1.0;
+////		else
+////			return (range - orderedDistances.get(i)) / range;
+//	}
+	public double normalize(List<Double> orderedDistances, double maxDist, int i){
+//		double max = 0.0;
+////		orderedDistances.size()*0.1
+//		if(orderedDistances != null){
+//			if (orderedDistances.size()>5){
+//				//		range = orderedDistances.get(0) - orderedDistances.get(orderedDistances.size()-1);
+//				max = orderedDistances.get(orderedDistances.size()-5);
+//
+//			}else if (orderedDistances.size()!=0){
+//				max = orderedDistances.get(orderedDistances.size()-1);
+//			}
+//		}
+//		if (range == 0)
+//			return 1.0;
+//		else
+//		System.out.println("max:"+Double.toString(max));
+		
+		return (maxDist- orderedDistances.get(i)) /maxDist;
 	}
+	
 
 	public void chartOutput(List<RepresentativeTrend> representativeTrends,LinkedHashMap<String,LinkedHashMap<Float,Float>> orig, ZvQuery args, Result finalOutput) throws JsonProcessingException{
 
@@ -109,7 +230,7 @@ public class ChartOutputUtil {
 			chartOutput.setyType(args.yAxis);
 			chartOutput.setzType(args.groupBy);
 			chartOutput.setRank(i+1);
-
+			
 			// fill in chart data
 			LinkedHashMap<Float,Float> points = orig.get(repTrend.getKey());
 			int c = 0;
@@ -139,10 +260,11 @@ public class ChartOutputUtil {
 			// chartOutput.setxType(repTrend.getKey());
 			// chartOutput.setRank(i+1);
 			// chartOutput.setyType(args.aggrFunc+"("+args.yAxis+")");
-
-			chartOutput.setxType(outTrend.getKey());
+			chartOutput.setxType(args.xAxis);
 			chartOutput.setyType(args.yAxis);
 			chartOutput.setzType(args.groupBy);
+			chartOutput.setNormalizedDistance(outTrend.getNormalizedDistance());
+			chartOutput.title = outTrend.getKey();
 			chartOutput.setRank(i+1);
 
 			// fill in chart data

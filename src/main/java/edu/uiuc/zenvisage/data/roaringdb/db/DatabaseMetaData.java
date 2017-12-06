@@ -38,7 +38,5 @@ public class DatabaseMetaData {
 	public void setPredicateColumns(Map<String, ColumnMetadata> predicateColumns) {
 		this.predicateColumns = predicateColumns;
 	}
-	
-	 
 
 }

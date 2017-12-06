@@ -1,21 +1,35 @@
 package edu.uiuc.zenvisage.model;
 
 public class Point {
-	float x;
-	float y;
+	float xval;
+	float yval;
 	
-	public float getX() {
-		return x;
+	public Point() {
+		// for jackson
 	}
-	public void setX(int x) {
-		this.x = x;
+	
+	public Point(float x, float y) {
+		this.xval = x;
+		this.yval = y;
 	}
-	public float getY() {
-		return y;
+
+	public float getXval() {
+		return xval;
 	}
-	public void setY(int y) {
-		this.y = y;
+
+	public void setXval(float xval) {
+		this.xval = xval;
 	}
+
+	public float getYval() {
+		return yval;
+	}
+
+	public void setYval(float yval) {
+		this.yval = yval;
+	}
+	
+	
 	
 
 }

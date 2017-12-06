@@ -3,6 +3,7 @@ package edu.uiuc.zenvisage.zqlcomplete.querygraph;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.uiuc.zenvisage.model.Sketch;
 import edu.uiuc.zenvisage.zqlcomplete.executor.Constraints;
 import edu.uiuc.zenvisage.zqlcomplete.executor.Name;
 import edu.uiuc.zenvisage.zqlcomplete.executor.VizColumn;
@@ -19,16 +20,19 @@ public class VisualComponentQuery {
 	private VizColumn viz;
 	// is sketchPoints associated with visualComponent?
 	// or vc output?
-	
+	private int numOfResults;
+	private Sketch sketch;
+
 	public VisualComponentQuery() {
 		name = new Name();
 		x = new XColumn();
 		y= new YColumn();
 		z= new ZColumn();
-		viz = new VizColumn();		
+		viz = new VizColumn();	
+		sketch = new Sketch();
 	}
 
-	public VisualComponentQuery(Name name, XColumn x, YColumn y, ZColumn z, String constraints, VizColumn viz) {
+	public VisualComponentQuery(Name name, XColumn x, YColumn y, ZColumn z, String constraints, VizColumn viz, Sketch sketch) {
 		super();
 		this.name = name;
 		this.x = x;
@@ -36,6 +40,7 @@ public class VisualComponentQuery {
 		this.z = z;
 		this.constraints = constraints;
 		this.viz = viz;
+		this.sketch = sketch;
 	}
 
 	public VisualComponentQuery(VisualComponentQuery source) {
@@ -94,4 +99,21 @@ public class VisualComponentQuery {
 	public void setViz(VizColumn viz) {
 		this.viz = viz;
 	}	
+
+	public Sketch getSketch() {
+		return sketch;
+	}
+	
+	public void setSketch(Sketch sketch) {
+		this.sketch = sketch;
+	}
+
+	public int getNumOfResults() {
+		return numOfResults;
+	}
+
+	public void setNumOfResults(int numOfResults) {
+		this.numOfResults = numOfResults;
+	}
+
 }
