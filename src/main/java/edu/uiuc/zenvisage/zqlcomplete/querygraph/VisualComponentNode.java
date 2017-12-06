@@ -14,6 +14,7 @@ import edu.uiuc.zenvisage.model.Point;
 import edu.uiuc.zenvisage.model.Sketch;
 import edu.uiuc.zenvisage.zql.executor.Constraints;
 import edu.uiuc.zenvisage.zqlcomplete.executor.Name;
+import edu.uiuc.zenvisage.zqlcomplete.executor.VizColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.XColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.YColumn;
 import edu.uiuc.zenvisage.zqlcomplete.executor.ZColumn;
@@ -26,9 +27,8 @@ import edu.uiuc.zenvisage.zqlcomplete.executor.ZQLRow;
 public class VisualComponentNode extends QueryNode{
 
 	private VisualComponentQuery vc;
-	private SQLQueryExecutor sqlQueryExecutor;
-	private String db;
-	private Sketch sketch;
+	protected SQLQueryExecutor sqlQueryExecutor;
+	protected String db;
 	
 	// private vc output
 	//TODO: build separate result node
@@ -46,16 +46,14 @@ public class VisualComponentNode extends QueryNode{
 		this.db = db;
 	}
 
-	public VisualComponentNode(VisualComponentQuery vc, Sketch sketch) {
+	public VisualComponentNode(VisualComponentQuery vc) {
 		this.vc = vc;
-		this.sketch = sketch;
 	}
 
-	public VisualComponentNode(VisualComponentQuery vc, LookUpTable table, SQLQueryExecutor sqlQueryExecutor, Sketch sketch) {
+	public VisualComponentNode(VisualComponentQuery vc, LookUpTable table, SQLQueryExecutor sqlQueryExecutor) {
 		super(table);
 		this.vc = vc;
 		this.sqlQueryExecutor = sqlQueryExecutor;
-		this.sketch = sketch;
 	}
 
 	@Override
@@ -94,22 +92,22 @@ public class VisualComponentNode extends QueryNode{
 			VisualComponentList vcList = new VisualComponentList();
 			ArrayList<VisualComponent> list = new ArrayList<VisualComponent>();
 			vcList.setVisualComponentList(list);
-			
-			if(sketch == null || sketch.points.isEmpty()) {
+			Sketch sketch = this.getVc().getSketch();
+			if(sketch == null || sketch.getPoints().isEmpty()) {
 				this.state = State.FINISHED;
 				return;
 			}
 			ArrayList<WrapperType> xList = new ArrayList<WrapperType>();
 			ArrayList<WrapperType> yList = new ArrayList<WrapperType>();
-			for (Point point : sketch.points) {
-				xList.add(new WrapperType(point.getX()));
-				yList.add(new WrapperType(point.getY()));
+			for (Point point : sketch.getPoints()) {
+				xList.add(new WrapperType(point.getXval()));
+				yList.add(new WrapperType(point.getYval()));
 			}
 			
 			VisualComponent vc = new VisualComponent(new WrapperType("sketch", "string"), new Points(xList, yList));
-			vc.setxAttribute(sketch.xAxis);
-			vc.setyAttribute(sketch.yAxis);
-			vc.setzAttribute(sketch.groupBy);
+			vc.setxAttribute(sketch.getxAxis());
+			vc.setyAttribute(sketch.getyAxis());
+			vc.setzAttribute(sketch.getGroupBy());
 			vcList.addVisualComponent(vc);
 			
 			this.getLookUpTable().put(name_obj.getName(), vcList);
@@ -117,26 +115,13 @@ public class VisualComponentNode extends QueryNode{
 			this.state = State.FINISHED;
 			return;
 		}
-
-		// call SQL backend
-		ZQLRow row = buildRowFromNode();
-		try {
-			// run zqlquery on this ZQLRow on the database table db
-			if(this.db == null || this.db.equals("")) {
-				// default case
-				sqlQueryExecutor.ZQLQueryEnhanced(row, "real_estate");
-			}
-			sqlQueryExecutor.ZQLQueryEnhanced(row, this.db);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
 		
 		//update the look table with name variable, e.g, f1)
 		String name = this.getVc().getName().getName();
 
 		//Fills in missing info into vcList for output purposes
 		AxisVariable axisVar = (AxisVariable) lookuptable.get(z.getVariable());
-		VisualComponentList vcList = sqlQueryExecutor.getVisualComponentList();
+		VisualComponentList vcList = getVisualCollection();
 		// If our Z values are from the output of a process, we need to sort the list using the scores
 		if (axisVar != null && axisVar.getScores() != null && axisVar.getScores().length > 0) {
 			double[] scores = axisVar.getScores();
@@ -152,6 +137,27 @@ public class VisualComponentNode extends QueryNode{
 		//System.out.println("vcList for node "+ name);
 		//System.out.println(sqlQueryExecutor.getVisualComponentList());
 		this.state = State.FINISHED;
+	}
+	
+	/**
+	 * Grabs the Visual Collection from data source. Currently implemented with Postgres backing it. 
+	 * In progress to make more modular, so can connect with any backend data tool.
+	 * @return
+	 */
+	private VisualComponentList getVisualCollection() {
+		// call SQL backend
+		ZQLRow row = buildRowFromNode();
+		try {
+			// run zqlquery on this ZQLRow on the database table db
+			if(this.db == null || this.db.equals("")) {
+				// default case
+				sqlQueryExecutor.ZQLQueryEnhanced(row, "real_estate");
+			}
+			sqlQueryExecutor.ZQLQueryEnhanced(row, this.db);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return sqlQueryExecutor.getVisualComponentList();
 	}
 	
 	/**
@@ -225,7 +231,7 @@ public class VisualComponentNode extends QueryNode{
 	 * Column hs no variable name, but values. Can use as is
 	 * Column has no variable name, and no value. Send as is (columns may be optional)
 	 */
-	public ZQLRow buildRowFromNode() {
+	protected ZQLRow buildRowFromNode() {
 
 		XColumn x = vc.getX();
 		// x1 (variable, no values)
@@ -291,7 +297,10 @@ public class VisualComponentNode extends QueryNode{
 		System.out.println(z.getVariable());
 		//System.out.println(z.getValues());
 		System.out.println(z.getAttribute());
-		vc.getViz().setVariable("AVG");
+		
+		if(!vc.getViz().getMap().containsKey(VizColumn.aggregation)) {
+			vc.getViz().getMap().put(VizColumn.aggregation, "AVG");
+		}
 		ZQLRow result = new ZQLRow(x, y, z, vc.getConstraints(), vc.getViz());
 		// null processe and sketchPoints (for now)
 		return result;
@@ -303,7 +312,6 @@ public class VisualComponentNode extends QueryNode{
 	 */
 	//TODO: FIX it doesn't work for non-strings
 	private String generateParenthesizedList(List<String> values) {
-		// TODO Auto-generated method stub
 		String parentheSizedValues="(";
 		for(String value: values){
 			value = value.replaceAll("'", "").replaceAll("\"", "");

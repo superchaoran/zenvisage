@@ -5,7 +5,10 @@ package edu.uiuc.zenvisage.zqlcomplete.querygraph;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.util.FastMath;
@@ -27,10 +30,162 @@ public class DEuclidean implements D {
 	
 	//Tarique: I have changes the type of axisvariables to a class instead of a string, so that we can also see attrubute type, i.e, x,y, or z.
 	
+	private void updateHashMap(Map<String, List<VisualComponent>> map, String key, VisualComponent vc) {
+		List<VisualComponent> res = map.get(key);
+		if (res == null) {
+			res = new ArrayList<VisualComponent>();
+			map.put(key, res);
+		}
+		res.add(vc);	// updating the referenced List in the hashmap	
+	}
+	
+	// idea is to update the AxisVariableScores I am passing by reference in the parameter list
+	private void process(VisualComponentList f1, VisualComponentList f2, List<AxisVariable> axisVars, int index, List<String> attributeConstraints, ArrayList<ArrayList<String>> outputAxisVars, List<Double> scores) {
+		if (index >= axisVars.size()) {
+			// base case: start processing for the visual components that satisfy all the constraints
+			List<VisualComponent> f1List = new ArrayList<VisualComponent>();
+			List<VisualComponent> f2List = new ArrayList<VisualComponent>();
+			for (VisualComponent vc : f1.getVisualComponentList()) {
+				for (String attributeConstraint : attributeConstraints) {
+					boolean satisfied = false;
+					if (attributeConstraint == vc.getxAttribute()) satisfied = true;
+					if (attributeConstraint == vc.getyAttribute()) satisfied = true;
+					if (attributeConstraint == vc.getZValue().getStrValue()) satisfied = true;
+					if (satisfied) {
+						f1List.add(vc);
+					}
+				}
+			}
+			for (VisualComponent vc : f2.getVisualComponentList()) {
+				for (String attributeConstraint : attributeConstraints) {
+					boolean satisfied = false;
+					if (attributeConstraint == vc.getxAttribute()) satisfied = true;
+					if (attributeConstraint == vc.getyAttribute()) satisfied = true;
+					if (attributeConstraint == vc.getZValue().getStrValue()) satisfied = true;
+					if (satisfied) {
+						f2List.add(vc);
+					}
+				}
+			}
+			
+			// these if statements are used if currently processing one vs many (eg one state vs many states), and using axisvar = state.*
+			// when the constraint is on say NY, f2 will have a component, but f1 will have nothing. Just take f1 (CA) compare it to (NY)
+			if (f1List.isEmpty()) {
+				f1List = f1.getVisualComponentList();
+			}
+			if (f2List.isEmpty()) {
+				f2List = f2.getVisualComponentList();
+			}
+			if(f1List.size() < f2List.size()) {
+				List<VisualComponent> temp = f1List; // point to what f1List is pointing to
+				f1List = f2List; // point f1List to what f2List is pointing to
+				f2List = temp;
+			}
+			
+			for (VisualComponent vc1 : f1List) {
+				for (VisualComponent vc2 : f2List) {
+					
+					//scores.add(calculateNormalizedDistance(f1List.get(i), f2List.get(j)));
+					scores.add(calculateNormalizedDistance(vc1, vc2));
+
+					//for (int i = 0; i < axisVars.size(); i++) {
+					//	outputAxisVars.get(i).add(extractAttribute(vc1, i, axisVars));
+					//}
+					outputAxisVars.get(0).add(extractAttribute(vc1, 0, axisVars));
+					outputAxisVars.get(1).add(extractAttribute(vc2, 1, axisVars));
+				}
+			}
+			return;
+		}
+		// For z, the values are like [CA, NY] for state
+		// For x and y, the values are the list of attributes, like ['year','month']
+		for(String value : axisVars.get(index).getValues()) {
+			attributeConstraints.add(value);
+			process(f1, f2, axisVars, index+1, attributeConstraints, outputAxisVars, scores);
+			attributeConstraints.remove(value);
+		}
+	}
+	
+	public AxisVariableScores executeNewer(VisualComponentList f1, VisualComponentList f2, List<AxisVariable> axisVariables) {
+		List<Double> scores = new ArrayList<Double>();
+		AxisVariableScores axisVariableScores;
+		ArrayList<ArrayList<String>> outputAxisVars = new ArrayList<ArrayList<String>>();;
+
+		// there should be one outputAxisVar for each axisVariable
+		// assumption: outputAxisVars of size 2
+		for (int i = 0; i < 2; i++) {
+			ArrayList<String> temp = new ArrayList<String>();
+			outputAxisVars.add(temp);
+		}
+		process(f1, f2, axisVariables, 0, new ArrayList<String>(), outputAxisVars, scores);
+		axisVariableScores = new AxisVariableScores(outputAxisVars, scores);
+		return axisVariableScores;
+	}
+	
+	public AxisVariableScores executeNew(VisualComponentList f1, VisualComponentList f2, List<AxisVariable> axisVariables) {
+		// eg key = month, value = visual components that have xAttribute as month
+		//Map<String, List<VisualComponent>> xHashMap = new HashMap<String, List<VisualComponent>>();
+		//Map<String, List<VisualComponent>> yHashMap = new HashMap<String, List<VisualComponent>>();
+		//Map<String, List<VisualComponent>> zHashMap = new HashMap<String, List<VisualComponent>>();
+
+		Map<String, List<VisualComponent>> f1HashMap = new HashMap<String, List<VisualComponent>>();
+		Map<String, List<VisualComponent>> f2HashMap = new HashMap<String, List<VisualComponent>>();
+	
+		for (VisualComponent vc : f1.getVisualComponentList()) {
+			String xAttribute = vc.getxAttribute();
+			updateHashMap(f1HashMap, xAttribute, vc);
+			updateHashMap(f1HashMap, vc.getyAttribute(), vc);
+			updateHashMap(f1HashMap, vc.getzAttribute(), vc);
+		}
+		
+		for (VisualComponent vc : f2.getVisualComponentList()) {
+			updateHashMap(f2HashMap, vc.getxAttribute(), vc);
+			updateHashMap(f2HashMap, vc.getyAttribute(), vc);
+			updateHashMap(f2HashMap, vc.getzAttribute(), vc);			
+		}
+		List<VisualComponent> f1Candidates = new ArrayList<VisualComponent>(f1.getVisualComponentList());
+		List<VisualComponent> f2Candidates = new ArrayList<VisualComponent>(f2.getVisualComponentList());
+		
+		for (AxisVariable axisVar : axisVariables) {
+			
+			// For z, the values are like [CA, NY] for state
+			// For x and y, the values are the list of attributes, like ['year','month']
+			for (String value : axisVar.getValues()) {
+				for (Iterator<VisualComponent> it = f1Candidates.iterator(); it.hasNext();) {
+					VisualComponent vc = it.next();
+					List<VisualComponent> vcListHasAttribute = f1HashMap.get(axisVar.getAttribute());
+					if (!vcListHasAttribute.contains(vc)) {
+						it.remove();
+					}
+				}
+				
+				for (Iterator<VisualComponent> it = f2Candidates.iterator(); it.hasNext();) {
+					VisualComponent vc = it.next();
+					List<VisualComponent> vcListHasAttribute = f1HashMap.get(axisVar.getAttribute());
+					if (!vcListHasAttribute.contains(vc)) {
+						it.remove();
+					}
+				} 
+			}
+		}
+		if (f1Candidates.isEmpty() || f2Candidates.isEmpty()) {
+			return null;
+		}
+/*		// java 8 woo
+		xHashMap.forEach((xKey, xValue) -> {
+			yHashMap.forEach((yKey, yValue) -> {
+				
+			});
+		});
+*/
+		return null;
+	}
+	
 	@Override
 	public AxisVariableScores execute(VisualComponentList f1, VisualComponentList f2,List<List<AxisVariable>> axisVariables) {
 		// TODO Auto-generated method stub
-
+		return executeNewer(f1, f2, axisVariables.get(0));
+/*		
 		List<VisualComponent> f1List = f1.getVisualComponentList();
 		List<VisualComponent> f2List = f2.getVisualComponentList();
 		
@@ -129,6 +284,7 @@ public class DEuclidean implements D {
 		}
 		
 		return null;
+		*/
 	}
 	
 	
@@ -184,7 +340,21 @@ public class DEuclidean implements D {
 		}
 
 	}
-	
+
+	public String extractAttribute(VisualComponent v1,int order, List<AxisVariable> axisVariables) {
+		
+		// small fix so when we have a shared axisVariable for two VCLists (eg both are state, so only provide 1 axisVar)
+		if (order >= axisVariables.size()) {
+			order = 0;
+		}
+		if(axisVariables.get(order).getAttributeType().equals("Z"))
+			return v1.getZValue().toString();
+		else if(axisVariables.get(order).getAttributeType().equals("Y"))
+			return v1.getyAttribute();
+		else {
+			return v1.getxAttribute();
+		}		
+	}
 	
 	public double calculateDistance(VisualComponent v1, VisualComponent v2) {
 		ArrayList<WrapperType> y1 = v1.getPoints().getYList();

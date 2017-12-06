@@ -1,4 +1,3 @@
-
 app.factory('ScatterService', function () {
         const factory = {};
         var currentPolygon;
@@ -12,178 +11,6 @@ app.factory('ScatterService', function () {
             $('.' + buttonId).addClass('disabled');
         }
 
-        factory.initializeScatterPlot = function (xmin, xmax, ymin, ymax) {
-            var container = $("#main-chart");
-            $(container).empty();
-            // finding actual dimensions of div
-            var heightOfDiv = container.innerHeight();
-            var widthOfDiv = container.innerWidth();
-            // finding relative point radius
-            var radius = 2;
-            var topMargin = 5;
-            var bottomMargin = 30;
-            var rightMargin = 0;
-            var leftMargin = 30;
-            var margin = {
-                    top: Math.ceil(topMargin),
-                    right: Math.ceil(rightMargin),
-                    bottom: Math.ceil(bottomMargin),
-                    left: Math.ceil(leftMargin)
-                },
-            width = widthOfDiv - margin.left - margin.right,
-            height = heightOfDiv - margin.top - margin.bottom;
-            var xMax = xmax
-            var yMax = ymax
-
-            //setting y-scale to fit in the svg window
-            var yScale = d3.scaleLinear()
-                .domain([0, yMax])
-                .range([height, 0]);
-
-            //setting x-scale to fit in the svg window
-            var xScale = d3.scaleLinear()
-                .domain([0, xMax])
-                .range([0, width]);
-
-            // AXES:
-            // to change tick-sizes: .ticksize(inner, outer) where inner are the normal ticks and outer are the end ticks
-            // here we are keeping the inner ticks to the default value of 6 and the outer to negative extremes to form a box
-
-            var xAxis = d3.axisBottom(xScale).tickSize(6, -height);
-            var yAxis = d3.axisLeft(yScale).tickSize(6, -width);
-
-            // ZOOM VARIABLE
-            var zoom = d3.zoom()
-                .scaleExtent([1, 10])
-                .on("zoom", zoomed);
-
-            var svg = d3.select("#main-chart")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g") //group that will house the plot
-                .attr("id", "main-area")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")"); //to center the g in the svg
-
-            //////////////////////////////////////////////////////GRID LINES
-            var yAxisTickValues = yAxis.scale().ticks(yAxis.ticks());
-            var xAxisTickValues = xAxis.scale().ticks(xAxis.ticks());
-            var xAxisTickSize = xAxisTickValues[1] - xAxisTickValues[0];
-            var yAxisTickSize = yAxisTickValues[1] - yAxisTickValues[0];
-            svg.append("g")
-                .attr("class", "x axis")
-                .selectAll("line")
-                .data(d3.range(0, xMax, xAxisTickSize / 4))
-                .enter().append("line")
-                .attr("x1", function (d) {
-                    return xScale(d);
-                })
-                .attr("y1", 0)
-                .attr("x2", function (d) {
-                    return xScale(d);
-                })
-                .attr("y2", height);
-
-            svg.append("g")
-                .attr("class", "y axis")
-                .selectAll("line")
-                .data(d3.range(0, yMax, yAxisTickSize / 4))
-                .enter().append("line")
-                .attr("x1", 0)
-                .attr("y1", function (d) {
-                    return yScale(d);
-                })
-                .attr("x2", width)
-                .attr("y2", function (d) {
-                    return yScale(d);
-                });
-
-            // ------------------ HEX BIN PROPERTIES --------------------------------------
-            /*
-             Clip-path is made to clip anything that goes out of the svg
-             */
-            svg.append("clipPath")
-                .attr("id", "clip")
-                .append("rect")
-                .attr("class", "mesh")
-                .attr("width", width)
-                .attr("height", height);
-
-            var hexbin = d3_hexbin.hexbin()
-                .radius(10);
-
-            drawHexbin();
-
-            // ------------------- DRAWING PLOTS FUNCTIONS -------------------------------------
-
-            /**
-             * DRAWING A HEXBIN PLOT
-             */
-            function drawHexbin() {
-                var hexbinPlot = svg.append("g")
-                        .attr("clip-path", "url(#clip)")
-                        .selectAll(".hexagon")
-                        //.data(hexbin(points)) // returns an array of bins
-                        .enter().append("path") // enter returns all fictitious elements according to number of data points
-                        .attr("class", "hexagon") // the class hexagon is a custom class made to incorporate stroke and fill
-                        .attr("d", hexbin.hexagon())
-                        .attr("transform", function (d) {
-                            return "translate(" + d.x + "," + d.y + ")"; // Each bin (or d) returned by hexbin(points) is an array containing the bin’s points
-                        })
-                    ;
-
-                //load the points animatedly
-                //reference url for ease: https://github.com/mbostock/d3/wiki/Transitions#d3_ease
-
-                hexbinPlot.transition()
-                    .style("fill", function (d, i) {
-                        return hexColor(d.length);
-                    })
-                    .duration(900)
-            }
-
-            /**
-             * DRAWING A SCATTERPLOT
-             */
-            function drawScatterPlot() {
-                var scatterPlot = svg.append('g')
-                        .attr("clip-path", "url(#clip)")
-                        .selectAll('circle').data(data)
-                        .enter().append('circle')
-                        .attr('r', 0)
-                        .attr('cx', function (d) {
-                            return xScale(d['xval'])
-                        })
-                        .attr('cy', function (d) {
-                            return yScale(d['y'])
-                        })
-                    ;
-
-                //load the points animatedly
-                //reference url for ease: https://github.com/mbostock/d3/wiki/Transitions#d3_ease
-                //load the points animatedly
-                scatterPlot.transition()
-                    .attr('r', radius)
-                    .duration(1000)
-                    .ease('elastic')
-
-            }
-
-
-            // adding the axes
-            svg.append("g")
-                .attr("class", "y axis")
-                .call(yAxis);
-
-            svg.append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
-
-            function zoomed() {
-                svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-            }
-
-        }
 
         factory.drawScatter = function ( data ) {
 
@@ -259,11 +86,13 @@ app.factory('ScatterService', function () {
             //     .tickSize(6, -width);
 
             var svg = d3.select("#main-chart")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
+                .attr("width", 400)
+                .attr("height", 200)
                 .append("g") //group that will house the plot
                 .attr("id", "main-area")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")"); //to center the g in the svg
+                .attr("transform",  "translate(40,20) scale(1.2)"); //to center the g in the svg
+
+
 
             //////////////////////////////////////////////////////GRID LINES
             var yAxisTickValues = yAxis.scale().ticks(yAxis.ticks());
@@ -298,6 +127,7 @@ app.factory('ScatterService', function () {
                     return yScale(d);
                 });
 
+
             // ------------------ HEX BIN PROPERTIES --------------------------------------
 
             var points = new Array(data.length)
@@ -311,12 +141,13 @@ app.factory('ScatterService', function () {
             /*
              Clip-path is made to clip anything that goes out of the svg
              */
-            svg.append("clipPath")
+
+             /*svg.append("clipPath")
                 .attr("id", "clip")
                 .append("rect")
                 .attr("class", "mesh")
-                .attr("width", width)
-                .attr("height", height);
+                .attr("width",300)
+                .attr("height", 115);*/ // This clip should not be needed
 
 
             var hexColorRed = d3.scaleLinear()
@@ -336,8 +167,9 @@ app.factory('ScatterService', function () {
                 .domain([0, d3.max(binLengths)])
                 .range(["lightblue", "darkblue"]);
 
-            drawHexbin();
 
+            drawHexbin();
+createcolorbar();
             // ------------------- DRAWING PLOTS FUNCTIONS -------------------------------------
 
             /**
@@ -352,7 +184,7 @@ app.factory('ScatterService', function () {
                         .attr("class", "hexagon") // the class hexagon is a custom class made to incorporate stroke and fill
                         .attr("d", hexbin.hexagon())
                         .attr("transform", function (d) {
-                            return "translate(" + d.x + "," + d.y + ")"; // Each bin (or d) returned by hexbin(points) is an array containing the bin’s points
+                            return "translate(" + d.x + "," + d.y + ") scale(0.8)"; // Each bin (or d) returned by hexbin(points) is an array containing the bin’s points
                         })
                     ;
 
@@ -369,6 +201,48 @@ app.factory('ScatterService', function () {
                     //.ease('sin');
             }
 
+
+
+                                            function createcolorbar(){
+                                            var svg = d3.select("#colorbar").append("svg").attr("transform",  "translate(30)")
+                                                .attr("width", 30)
+                                                .attr("height", 180);
+                                            var gradient = svg.append("defs")
+                                              .append("linearGradient")
+                                                .attr("id", "gradient")
+                                                .attr("x1", "0%")
+                                                .attr("y1", "0%")
+                                                .attr("x2", "0%")
+                                                .attr("y2", "100%")
+                                                .attr("spreadMethod", "pad");
+                                            gradient.append("stop")
+                                                .attr("offset", "0%")
+                                                .attr("stop-color", "darkblue")
+                                                .attr("stop-opacity", 1);
+                                            gradient.append("stop")
+                                                .attr("offset", "100%")
+                                                .attr("stop-color", "lightblue")
+                                                .attr("stop-opacity", 1);
+                                            svg.append("rect")
+                                                .attr("width", 10)
+                                                .attr("height", 160)
+                                                .style("fill", "url(#gradient)").attr("transform","translate(20,10)");
+
+                                            var yScale = d3.scaleLinear()
+                                                .range([0, 158])
+                                                .domain([d3.max(binLengths),0]);
+
+                                            /*var yAxis = d3.svg.axis()
+                                                  .orient("left")
+                                                  .ticks(5)  //Set rough # of ticks
+                                                    //.tickFormat(formatPercent)
+                                                  .scale(xScale);*/
+
+                                            svg.append("g")
+                                                .attr("class", "axis") //Assign "axis" class
+                                                .attr("transform","translate(20,10)")
+                                                .call(d3.axisLeft(yScale).ticks(5).tickSize(0));
+                                            };
             // adding the axes
             svg.append("g")
                 .attr("class", "y axis")
@@ -536,10 +410,43 @@ app.factory('ScatterService', function () {
         return factory;
     });
 
-app.controller('scatterController', ['$scope', '$rootScope', 'ScatterService', function ($scope, $rootScope, ScatterService) {
-        //var data = [{'xval': 4, 'yval': 55.5}, {'xval': 3, 'yval': 5}, {'xval': 4, 'yval': 2}, {'xval': 5, 'yval': 7}]
+app.controller('scatterController', ['$scope','$http', '$rootScope', 'ScatterService', function ($scope, $http, $rootScope, ScatterService) {
+$scope.data;
+
+/*  $http.get('/zv/executeScatter', {params: {'query': {"db":"real_estate", "zqlRows":[{"name":{"output":true,"sketch":true,"name":"f1"},"x":{"variable":"x1","attributes":["'year'"]},"y":{"variable":"y1","attributes":["'soldprice'"]},"z":{"variable":"z1","aggregate":true,"attribute":"'state'","values":["*"]}, "viz":{"map": {"type":"scatter"}} }]}}}
+  ).then(
+      function (response) {
+          $scope.data = response.data.outputCharts[0].points;
+          //$scope.scatterService = ScatterService.drawScatter( $scope.data );
+          //$scope.scatterService = ScatterService.drawScatter( data2 );
+          console.log("data: ", response.data.outputCharts[0].points);
+          $scope.scatterService = ScatterService.drawScatter( $scope.data );
+          $scope.submit;
+          setTimeout(function () {
+              $rootScope.shared = {value:"The input controller just changed this"};
+              $rootScope.$digest();
+          }, 3000);
+      },
+      function (response) {
+      //    console.log("failed: ", escape(response));
+      }
+  );*/
+
+
+
+        var data = [{'xval': 4, 'yval': 55.5}, {'xval': 3.5, 'yval': 30},{'xval': 0.5, 'yval':7},
+                    {'xval': 3, 'yval':15},{'xval': 3.2, 'yval':20},{'xval': 3.2, 'yval':20},
+                    {'xval': 3.2, 'yval':35},{'xval': 3.2, 'yval':45},{'xval': 3.8, 'yval':50},
+                    {'xval': 0.5, 'yval':7},{'xval': 0.5, 'yval':7},{'xval': 0.5, 'yval':7},
+                    {'xval': 3, 'yval': 5},{'xval': 3, 'yval': 5},{'xval': 3, 'yval': 5},
+                    {'xval': 3, 'yval': 5},{'xval': 3, 'yval': 5},{'xval': 3, 'yval': 5},
+                    {'xval': 1.6, 'yval': 10}, {'xval': 2.5, 'yval': 17},{'xval': 2.5, 'yval': 17},
+                    {'xval': 2.5, 'yval': 17},{'xval': 2.5, 'yval': 17},{'xval': 2.5, 'yval': 17}]
+
+        //$scope.scatterService = ScatterService.drawScatter( $scope.data );
         //currentRepresentativePlot = ScatterService.drawScatter( data );
-        $scope.scatterService = ScatterService;
+        //drawRandomChart();
+        // $scope.scatterService = ScatterService;
         $scope.submit = function (){
             var polygons = ScatterService.getPolygons();
             $rootScope.polygons = polygons;

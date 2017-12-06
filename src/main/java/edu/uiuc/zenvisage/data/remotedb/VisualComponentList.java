@@ -1,6 +1,7 @@
 package edu.uiuc.zenvisage.data.remotedb;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -9,8 +10,10 @@ public class VisualComponentList {
 	private String ztype;
 	private String xType;
     private String ytype;
-	private ArrayList<VisualComponent> visualComponentList;
-
+	public ArrayList<VisualComponent> visualComponentList;
+    public HashMap<String,VisualComponent> ZToVisualComponents = new HashMap<>();
+	
+	
 	public VisualComponentList(){}
 	
 	public ArrayList<VisualComponent> getVisualComponentList() {
@@ -22,10 +25,13 @@ public class VisualComponentList {
 	}
 	
 	public void addVisualComponent(VisualComponent input){
+		if (this.visualComponentList == null) {
+			this.visualComponentList = new ArrayList<VisualComponent>();
+		}
 		this.visualComponentList.add(input);
 	}
 	
-	public LinkedHashMap<String, LinkedHashMap<Float, Float>> toInMemoryHashmap(){
+	public synchronized LinkedHashMap<String, LinkedHashMap<Float, Float>> toInMemoryHashmap(){
 		LinkedHashMap<String, LinkedHashMap<Float, Float>> output = new LinkedHashMap<String, LinkedHashMap<Float, Float>>();
 		for(VisualComponent i: visualComponentList){
 			List<WrapperType> xList = i.getPoints().getXList();
@@ -35,12 +41,16 @@ public class VisualComponentList {
 			List<WrapperType> yList = i.getPoints().getYList();
 			LinkedHashMap<Float, Float> map = new LinkedHashMap<Float, Float>();
 			for(int j = 0; j < xList.size(); j++) {
-				map.put(xList.get(j).getNumberValue(), yList.get(j).getNumberValue());
+				map.put(new Float(xList.get(j).getNumberValue()), new Float(yList.get(j).getNumberValue()));
 			}
-			output.put(new String(i.getZValue().toString()), map);
+			//System.out.println("zValue:"+i.getZValue());
+//			if(i.getZValue()==null || i.getZValue().toString() == null ) continue;
+			String key = new String(i.getZValue().toString());
+			output.put(key, map);
 		}
 		return output;
 	}
+	
 	
 	public String toString(){
 		StringBuilder ret = new StringBuilder();
